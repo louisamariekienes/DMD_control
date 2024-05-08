@@ -3,6 +3,7 @@
 import numpy as np
 import patterns
 import matplotlib.pyplot as plt
+import pyspeckle
 
 
 def main():
@@ -29,6 +30,11 @@ def main():
     axes[2, 1].imshow(test_img6, cmap='Greys')
     axes[3, 0].imshow(test_img7, cmap='Greys')
     axes[3, 1].imshow(test_img8, cmap='Greys')
+
+    img = patterns.speckle_disorder(1920, 1080, 10, p=0.7)
+    print(img.size == 1920 * 1080)
+
+    #plt.imshow(img, cmap='Greys')
     plt.show()
 
 

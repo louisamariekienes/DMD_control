@@ -5,8 +5,8 @@ from ALP4 import *
 import time
 import matplotlib.pyplot as plt
 from PIL import Image
+import pyspeckle
 
-height, width = 1080, 1920
 
 def rect_pattern(height, width, size):
     img = np.zeros([height, width])
@@ -23,6 +23,7 @@ def rect_pattern(height, width, size):
         img[centery - r:centery + r, centerx - r:centerx + r] = (2 ** 8 - 1)
 
     return img
+
 
 def ring_pattern(height, width, radius, ring_width):
 
@@ -41,6 +42,7 @@ def ring_pattern(height, width, radius, ring_width):
     img[ring_mask] = (2 ** 8 - 1)
 
     return img
+
 
 def string_pattern(height, width, string_width):
     img = np.zeros((height, width))
@@ -68,7 +70,6 @@ def image_pattern(height, width, image_path):
     # Convert the resized image to grayscale
     gray_img = img.convert('1')
     matrix = np.invert(np.array(gray_img))
-    print(matrix)
 
     # Get the dimensions of the resized image
     resized_height, resized_width = matrix.shape
@@ -86,7 +87,24 @@ def image_pattern(height, width, image_path):
     return final_matrix
 
 
-def speckle_disorder():
-    pass
+def speckle_disorder(height, width, pixel_size=1, p=0.5):
+
+    # Calculate the dimensions of the metapixel matrix
+    meta_rows = width // pixel_size
+    meta_cols = height // pixel_size
+
+    # Generate a metapixel matrix of random 0s and 1s
+    metapixel_matrix = np.random.choice([0,1], size=(meta_rows, meta_cols), p=[1-p, p])
+
+    # Repeat each value in the metapixel matrix to form the binary matrix
+    binary_matrix = np.repeat(np.repeat(metapixel_matrix,  pixel_size, axis=0), pixel_size, axis=1)
+
+    # Fill matrix with zeros
+    img = np.pad(binary_matrix, ((0, width-meta_rows*pixel_size), (0, height-meta_cols*pixel_size)), mode='constant')
+    return img
+
+
+
+
 
 
