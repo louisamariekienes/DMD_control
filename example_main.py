@@ -3,37 +3,49 @@
 # Press Umschalt+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-import numpy as np
-from ALP4 import *
+from dmd.ALP4 import *
 import time
+import patterns
 
 
 def main():
     # Use a breakpoint in the code line below to debug your script.
     print('Hi Louisa')  # Press Strg+F8 to toggle the breakpoint.
 
-    # Load the Vialux .dll
-    DMD = ALP4(version='4.3')
+    # Load the Vialux.dll
+    DMD = ALP4(version='4.3', libDir='C:/Users/laborbenutzer/Desktop/Louisa/DMD_control')
     # Initialize the device
     DMD.Initialize()
 
     # Binary amplitude image (0 or 1)
     bitDepth = 1
+    height, width = DMD.nSizeY, DMD.nSizeX
+
     imgBlack = np.zeros([DMD.nSizeY, DMD.nSizeX])
     imgWhite = np.ones([DMD.nSizeY, DMD.nSizeX]) * (2 ** 8 - 1)
-    imgSeq = np.concatenate([imgBlack.ravel(), imgWhite.ravel()])
+    test_img8 = abs(patterns.image_pattern(height, width, 'figures/KL_skyline.jpg')-(2**8-1))
+    test_img1 = patterns.rect_pattern(height, width, 10)
+    test_img2 = abs(patterns.rect_pattern(height, width, 50)-(2**8-1))
+
+    img_list = []
+    for i in range(10):
+        img = abs(patterns.rect_pattern(height, width, i*20)-(2**8-1))
+        img_list.append(img)
+
+    imgSeq = np.concatenate(img_list)
 
     # Allocate the onboard memory for the image sequence
-    DMD.SeqAlloc(nbImg=2, bitDepth=bitDepth)
+    DMD.SeqAlloc(nbImg=1, bitDepth=bitDepth)
     # Send the image sequence as a 1D list/array/numpy array
-    DMD.SeqPut(imgData=imgSeq)
+    # DMD.SeqPut(imgData=imgSeq)
+    DMD.SeqPut(imgData=test_img2)
     # Set image rate to 50/1 Hz
-    DMD.SetTiming(pictureTime=2000)        # 20000 for 50 Hz, 1 for 1Hz
+    #DMD.SetTiming(pictureTime=20000)        # 20000 for 50 Hz, 1 for 1Hz
 
     # Run the sequence in an infinite loop
     DMD.Run()
 
-    time.sleep(10)
+    time.sleep(300)
 
     # Stop the sequence display
     DMD.Halt()

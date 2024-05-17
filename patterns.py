@@ -1,9 +1,6 @@
 # author: Louisa Marie Kienesberger
 
-import numpy as np
-from ALP4 import *
-import time
-import matplotlib.pyplot as plt
+from dmd.ALP4 import *
 from PIL import Image
 
 height, width = 1080, 1920
@@ -12,7 +9,7 @@ def rect_pattern(height, width, size):
     img = np.zeros([height, width])
 
     centery = int(height / 2)
-    centerx = int(width / 2)
+    centerx = int(width / 2) + 0
     r = int(size / 2)
 
     if size == 1:
@@ -68,7 +65,6 @@ def image_pattern(height, width, image_path):
     # Convert the resized image to grayscale
     gray_img = img.convert('1')
     matrix = np.invert(np.array(gray_img))
-    print(matrix)
 
     # Get the dimensions of the resized image
     resized_height, resized_width = matrix.shape
@@ -86,7 +82,42 @@ def image_pattern(height, width, image_path):
     return final_matrix
 
 
-def speckle_disorder():
-    pass
+def speckle_disorder(height, width, pixel_size=1, p=0.5):
 
+    # Calculate the dimensions of the metapixel matrix
+    meta_rows = width // pixel_size
+    meta_cols = height // pixel_size
+
+    # Generate a metapixel matrix of random 0s and 1s
+    metapixel_matrix = np.random.choice([0, 1], size=(meta_rows, meta_cols), p=[1-p, p])
+
+    # Repeat each value in the metapixel matrix to form the binary matrix
+    binary_matrix = np.repeat(np.repeat(metapixel_matrix,  pixel_size, axis=0), pixel_size, axis=1)
+
+    # Fill matrix with zeros
+    img = np.pad(binary_matrix, ((0, width-meta_rows*pixel_size), (0, height-meta_cols*pixel_size)), mode='constant')
+    return img
+
+def calibration_pattern(height, width, square_size):
+    img = np.zeros((height, width))
+
+    # Calculate the center of the matrix
+    centery = int(height / 2)
+    centerx = int(width / 2)
+
+    # Calculate the half size of the square
+    block_size = 10
+    half_square = square_size // 2
+
+    # Define the corner positions for the square
+    top_left_start = (centerx - half_square, centery - half_square)
+    top_right_start = (centerx - half_square, centery + half_square - block_size + 1)
+    bottom_left_start = (centerx + half_square - block_size + 1, centery - half_square)
+
+    # Set the values in the corners with the given block size
+    img[top_left_start[0]:top_left_start[0] + block_size, top_left_start[1]:top_left_start[1] + block_size] = 1
+    img[top_right_start[0]:top_right_start[0] + block_size, top_right_start[1]:top_right_start[1] + block_size] = 1
+    img[bottom_left_start[0]:bottom_left_start[0] + block_size, bottom_left_start[1]:bottom_left_start[1] + block_size] = 1
+
+    return img
 
