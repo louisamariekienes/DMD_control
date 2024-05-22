@@ -7,6 +7,8 @@ from dmd.ALP4 import *
 import time
 import patterns
 
+import matplotlib.pyplot as plt
+
 
 def main():
     # Use a breakpoint in the code line below to debug your script.
@@ -25,7 +27,10 @@ def main():
     imgWhite = np.ones([DMD.nSizeY, DMD.nSizeX]) * (2 ** 8 - 1)
     test_img8 = abs(patterns.image_pattern(height, width, 'figures/KL_skyline.jpg')-(2**8-1))
     test_img1 = patterns.rect_pattern(height, width, 10)
-    test_img2 = abs(patterns.rect_pattern(height, width, 50)-(2**8-1))
+    #test_img2 = abs(patterns.rect_pattern(height, width, 400)-(2**8-1))
+    test_img2 = abs(patterns.calibration_pattern(height, width, 400)-(2**8-1))
+    #plt.imshow(test_img2)
+    #plt.show()
 
     img_list = []
     for i in range(10):

@@ -1,11 +1,11 @@
 import sys
 import os
 from os.path import exists
+import copy
 
 from ids_peak import ids_peak
 from ids_peak_ipl import ids_peak_ipl
 from ids_peak import ids_peak_ipl_extension
-
 
 TARGET_PIXEL_FORMAT = ids_peak_ipl.PixelFormatName_BGRa8
 
@@ -17,12 +17,12 @@ class Camera:
         self.device_manager = ids_peak.DeviceManager.Instance()
 
         self.ipl_image = None
+        self.current_image = None
         self._device = None
         self._datastream = None
         self.acquisition_running = False
         self.node_map = None
         self.make_image = False
-        self.keep_image = True
         self._buffer_list = []
 
         self.killed = False
@@ -125,6 +125,8 @@ class Camera:
             except Exception as e:
                 print(f"Exception (close): {str(e)}")
 
+        self.killed = True
+
     def start_acquisition(self):
         if self._device is None:
             return False
@@ -184,6 +186,7 @@ class Camera:
 
             # Unlock parameters
             self.node_map.FindNode("TLParamsLocked").SetValue(0)
+            print('Acquisition stopped')
         except Exception as e:
             print(str(e))
 
@@ -233,7 +236,7 @@ class Camera:
         except Exception as e:
             print(f"Cannot change pixelformat: {str(e)}")
 
-    def save_image(self):
+    def send_image(self):
         cwd = os.getcwd()
 
         buffer = self._datastream.WaitForFinishedBuffer(1000)
@@ -242,19 +245,21 @@ class Camera:
         # Get image from buffer (shallow copy)
         self.ipl_image = ids_peak_ipl_extension.BufferToImage(buffer)
 
+
         # This creates a deep copy of the image, so the buffer is free to be used again
         # NOTE: Use `ImageConverter`, since the `ConvertTo` function re-allocates
         #       the converison buffers on every call
         converted_ipl_image = self._image_converter.Convert(
             self.ipl_image, TARGET_PIXEL_FORMAT)
 
-        self._datastream.QueueBuffer(buffer)
+        # Get raw image data from converted image and construct a QImage from it
+        self.current_image = copy.copy(converted_ipl_image.get_numpy_2D_16())
+        print(self.current_image.shape)
+        print(self.current_image[1500])
+        #plt.imshow(self.current_image)
+        #plt.show()
 
-        if self.keep_image:
-            print("Saving image...")
-            ids_peak_ipl.ImageWriter.WriteAsPNG(
-                self._valid_name(cwd + "/image", ".png"), converted_ipl_image)
-            print("Saved!")
+        self._datastream.QueueBuffer(buffer)
 
     def wait_for_signal(self):
         while not self.killed:
@@ -263,7 +268,7 @@ class Camera:
                     # Call software trigger to load image
                     self.software_trigger()
                     # Get image and save it as file, if that option is enabled
-                    self.save_image()
+                    self.send_image()
                     self.make_image = False
             except Exception as e:
                 self.make_image = False

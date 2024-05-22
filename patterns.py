@@ -102,22 +102,23 @@ def calibration_pattern(height, width, square_size):
     img = np.zeros((height, width))
 
     # Calculate the center of the matrix
-    centery = int(height / 2)
-    centerx = int(width / 2)
+    centery = int(width / 2)
+    centerx = int(height / 2)
 
     # Calculate the half size of the square
-    block_size = 10
+    block_size = 20
+    half_block = block_size//2
     half_square = square_size // 2
 
     # Define the corner positions for the square
-    top_left_start = (centerx - half_square, centery - half_square)
-    top_right_start = (centerx - half_square, centery + half_square - block_size + 1)
-    bottom_left_start = (centerx + half_square - block_size + 1, centery - half_square)
+    top_left_start = (centerx - half_square - half_block, centery - half_square - half_block)
+    top_right_start = (centerx + half_square - half_block, centery - half_square - half_block)
+    bottom_left_start = (centerx - half_square -half_block, centery + half_square -half_block)
 
     # Set the values in the corners with the given block size
-    img[top_left_start[0]:top_left_start[0] + block_size, top_left_start[1]:top_left_start[1] + block_size] = 1
-    img[top_right_start[0]:top_right_start[0] + block_size, top_right_start[1]:top_right_start[1] + block_size] = 1
-    img[bottom_left_start[0]:bottom_left_start[0] + block_size, bottom_left_start[1]:bottom_left_start[1] + block_size] = 1
+    img[top_left_start[0]:top_left_start[0] + block_size, top_left_start[1]:top_left_start[1] + block_size] = 2**8-1
+    img[top_right_start[0]:top_right_start[0] + block_size, top_right_start[1]:top_right_start[1] + block_size] = 2**8-1
+    img[bottom_left_start[0]:bottom_left_start[0] + block_size, bottom_left_start[1]:bottom_left_start[1] + block_size] = 2**8-1
 
     return img
 
