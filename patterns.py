@@ -1,18 +1,15 @@
 # author: Louisa Marie Kienesberger
 
-import numpy as np
-from ALP4 import *
-import time
-import matplotlib.pyplot as plt
+from dmd.ALP4 import *
 from PIL import Image
 import pyspeckle
 
 
 def rect_pattern(height, width, size):
-    img = np.zeros([height, width])
+    img = np.zeros([width, height])
 
     centery = int(height / 2)
-    centerx = int(width / 2)
+    centerx = int(width / 2) + 0
     r = int(size / 2)
 
     if size == 1:
@@ -28,7 +25,7 @@ def rect_pattern(height, width, size):
 def ring_pattern(height, width, radius, ring_width):
 
     # Create a grid of coordinates
-    y, x = np.ogrid[:height, :width]
+    y, x = np.ogrid[:width, :height]
 
     # Calculate the distance from the center of the array
     distance_from_center = np.sqrt((x - width / 2) ** 2 + (y - height / 2) ** 2)
@@ -38,14 +35,14 @@ def ring_pattern(height, width, radius, ring_width):
                                distance_from_center <= radius + ring_width / 2)
 
     # Create a binary array with the ring imprinted
-    img = np.zeros((height, width))
+    img = np.zeros((width, height))
     img[ring_mask] = (2 ** 8 - 1)
 
     return img
 
 
 def string_pattern(height, width, string_width):
-    img = np.zeros((height, width))
+    img = np.zeros((width, height))
 
     h = int(string_width/2)
     centery = int(height / 2)
@@ -67,7 +64,7 @@ def image_pattern(height, width, image_path):
     # Resize the image to fit the desired dimensions while maintaining aspect ratio
     img.thumbnail((width, height))
 
-    # Convert the resized image to grayscale
+    # Convert the resized image to black/white image
     gray_img = img.convert('1')
     matrix = np.invert(np.array(gray_img))
 
@@ -90,8 +87,8 @@ def image_pattern(height, width, image_path):
 def speckle_disorder(height, width, pixel_size=1, p=0.5):
 
     # Calculate the dimensions of the metapixel matrix
-    meta_rows = width // pixel_size
-    meta_cols = height // pixel_size
+    meta_rows = height // pixel_size
+    meta_cols = width // pixel_size
 
     # Generate a metapixel matrix of random 0s and 1s
     metapixel_matrix = np.random.choice([0,1], size=(meta_rows, meta_cols), p=[1-p, p])
@@ -100,11 +97,33 @@ def speckle_disorder(height, width, pixel_size=1, p=0.5):
     binary_matrix = np.repeat(np.repeat(metapixel_matrix,  pixel_size, axis=0), pixel_size, axis=1)
 
     # Fill matrix with zeros
-    img = np.pad(binary_matrix, ((0, width-meta_rows*pixel_size), (0, height-meta_cols*pixel_size)), mode='constant')
+    img = np.pad(binary_matrix, ((0, height-meta_rows*pixel_size), (0, width-meta_cols*pixel_size)), mode='constant')
     return img
 
 
+def calibration_pattern(height, width, square_size):
+    img = np.zeros((width, height))
 
+    # Calculate the center of the matrix
+    centery = int(width / 2)
+    centerx = int(height / 2)
 
+    # Calculate the half size of the square
+    block_size = 20
+    half_block = block_size//2
+    half_square = square_size // 2
 
+    # Define the corner positions for the square
+    top_left = [centerx - half_square, centery - half_square]
+    top_right = [centerx + half_square, centery - half_square]
+    bottom_left = [centerx - half_square, centery + half_square]
+
+    # Set the values in the corners with the given block size
+    img[top_left[0] - half_block:top_left[0] + half_block, top_left[1] - half_block:top_left[1] + block_size] = 2**8-1
+    img[top_right[0] - half_block:top_right[0] + block_size, top_right[1] - half_block:top_right[1] + block_size] = 2**8-1
+    img[bottom_left[0] - half_block:bottom_left[0] + block_size, bottom_left[1] - half_block:bottom_left[1] + block_size] = 2**8-1
+
+    coords = np.array([top_left, top_right, bottom_left]).astype(np.float32)
+
+    return img, coords
 
