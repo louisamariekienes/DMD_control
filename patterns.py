@@ -1,12 +1,11 @@
 # author: Louisa Marie Kienesberger
 
-from dmd.ALP4 import *
+from dmd.x64.ALP4 import *
 from PIL import Image
-import pyspeckle
 
 
 def rect_pattern(height, width, size):
-    img = np.zeros([width, height])
+    img = np.zeros([height, width])
 
     centery = int(height / 2)
     centerx = int(width / 2) + 0
@@ -42,7 +41,7 @@ def ring_pattern(height, width, radius, ring_width):
 
 
 def string_pattern(height, width, string_width):
-    img = np.zeros((width, height))
+    img = np.zeros((height, width))
 
     h = int(string_width/2)
     centery = int(height / 2)
@@ -102,11 +101,11 @@ def speckle_disorder(height, width, pixel_size=1, p=0.5):
 
 
 def calibration_pattern(height, width, square_size):
-    img = np.zeros((width, height))
+    img = np.zeros((height, width))
 
     # Calculate the center of the matrix
-    centery = int(width / 2)
-    centerx = int(height / 2)
+    centerx = int(width / 2)
+    centery = int(height / 2)
 
     # Calculate the half size of the square
     block_size = 20
@@ -114,14 +113,19 @@ def calibration_pattern(height, width, square_size):
     half_square = square_size // 2
 
     # Define the corner positions for the square
-    top_left = [centerx - half_square, centery - half_square]
-    top_right = [centerx + half_square, centery - half_square]
-    bottom_left = [centerx - half_square, centery + half_square]
+    #top_left = [centery - half_square, centerx - half_square]
+    #top_right = [centery + half_square, centerx - half_square]
+    #bottom_left = [centery - half_square, centerx + half_square]
+
+    # Define the corner positions for the square
+    top_left = [centery - half_square, centerx - half_square]
+    top_right = [centery - half_square, centerx + half_square]
+    bottom_left = [centery + half_square, centerx - half_square]
 
     # Set the values in the corners with the given block size
-    img[top_left[0] - half_block:top_left[0] + half_block, top_left[1] - half_block:top_left[1] + block_size] = 2**8-1
-    img[top_right[0] - half_block:top_right[0] + block_size, top_right[1] - half_block:top_right[1] + block_size] = 2**8-1
-    img[bottom_left[0] - half_block:bottom_left[0] + block_size, bottom_left[1] - half_block:bottom_left[1] + block_size] = 2**8-1
+    img[top_left[0] - half_block:top_left[0] + half_block, top_left[1] - half_block:top_left[1] + half_block] = 2**8-1
+    img[top_right[0] - half_block:top_right[0] + half_block, top_right[1] - half_block:top_right[1] + half_block] = 2**8-1
+    img[bottom_left[0] - half_block:bottom_left[0] + half_block, bottom_left[1] - half_block:bottom_left[1] + half_block] = 2**8-1
 
     coords = np.array([top_left, top_right, bottom_left]).astype(np.float32)
 

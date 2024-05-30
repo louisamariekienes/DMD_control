@@ -3,7 +3,7 @@
 # Press Umschalt+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-from dmd.ALP4 import *
+from dmd.x64.ALP4 import *
 import time
 import patterns
 
@@ -15,7 +15,9 @@ def main():
     print('Hi Louisa')  # Press Strg+F8 to toggle the breakpoint.
 
     # Load the Vialux.dll
-    DMD = ALP4(version='4.3', libDir='C:/Users/laborbenutzer/Desktop/Louisa/DMD_control')
+    DMD = ALP4(version='4.3', libDir='C:\\Users\\laborbenutzer\\Desktop\\Louisa\\DMD_control\\dmd')
+    #DMD = ALP4(version='4.3', libDir='C:\Program Files\ALP-4.3/ALP-4.3 API')
+
     # Initialize the device
     DMD.Initialize()
 
@@ -28,10 +30,13 @@ def main():
     imgWhite = np.ones([DMD.nSizeY, DMD.nSizeX]) * (2 ** 8 - 1)
     test_img8 = abs(patterns.image_pattern(height, width, 'figures/KL_skyline.jpg')-(2**8-1))
     test_img1 = patterns.rect_pattern(height, width, 10)
-    #test_img2 = abs(patterns.rect_pattern(height, width, 400)-(2**8-1))
-    test_img2 = abs(patterns.calibration_pattern(height, width, 400)-(2**8-1))
-    #plt.imshow(test_img2)
-    #plt.show()
+    test_img2 = abs(patterns.rect_pattern(height, width, 400)-(2**8-1))
+    test_img5, var = patterns.calibration_pattern(height, width, 400)
+    test_img10 = abs(test_img5-(2**8-1))
+    #cal_pattern, dmd_coords = patterns.calibration_pattern(height, width, 400)
+    #test_img10 = abs(cal_pattern - (2 ** 8 - 1))
+    plt.imshow(test_img10)
+    plt.show()
 
     img_list = []
     for i in range(10):
@@ -44,7 +49,7 @@ def main():
     DMD.SeqAlloc(nbImg=1, bitDepth=bitDepth)
     # Send the image sequence as a 1D list/array/numpy array
     # DMD.SeqPut(imgData=imgSeq)
-    DMD.SeqPut(imgData=test_img2)
+    DMD.SeqPut(imgData=test_img10)
     # Set image rate to 50/1 Hz
     #DMD.SetTiming(pictureTime=20000)        # 20000 for 50 Hz, 1 for 1Hz
 

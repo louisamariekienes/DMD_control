@@ -2,12 +2,21 @@ import sys
 import os
 from os.path import exists
 import copy
+import numpy as np
+from scipy.signal import find_peaks
+import cv2
+import threading
+import patterns
+import time
+import scipy.optimize as opt
 
 from ids_peak import ids_peak
 from ids_peak_ipl import ids_peak_ipl
 from ids_peak import ids_peak_ipl_extension
 
-TARGET_PIXEL_FORMAT = ids_peak_ipl.PixelFormatName_BGRa8
+import matplotlib.pyplot as plt
+
+TARGET_PIXEL_FORMAT = ids_peak_ipl.PixelFormatName_Mono8
 
 
 class Camera:
@@ -16,6 +25,7 @@ class Camera:
         ids_peak.Library.Initialize()
         self.device_manager = ids_peak.DeviceManager.Instance()
 
+        self.vocal = False
         self.ipl_image = None
         self.current_image = None
         self._device = None
@@ -29,6 +39,7 @@ class Camera:
 
         self._get_device()
         self._image_converter = ids_peak_ipl.ImageConverter()
+
 
     def __del__(self):
         self.close()
@@ -75,8 +86,8 @@ class Camera:
         self.node_map.FindNode("UserSetSelector").SetCurrentEntry("Default")
         self.node_map.FindNode("UserSetLoad").Execute()
         self.node_map.FindNode("UserSetLoad").WaitUntilDone()
-
-        print("Finished opening device!")
+        if self.vocal:
+            print("Finished opening device!")
 
     def _init_data_stream(self):
         # Open device's datastream
@@ -160,8 +171,8 @@ class Camera:
             self.node_map.FindNode("AcquisitionStart").Execute()
             self.node_map.FindNode("AcquisitionStart").WaitUntilDone()
             self.acquisition_running = True
-
-            print("Acquisition started!")
+            if self.vocal:
+                print("Acquisition started!")
         except Exception as e:
             print(f"Exception (start acquisition): {str(e)}")
             return False
@@ -186,15 +197,18 @@ class Camera:
 
             # Unlock parameters
             self.node_map.FindNode("TLParamsLocked").SetValue(0)
-            print('Acquisition stopped')
+            if self.vocal:
+                print('Acquisition stopped')
         except Exception as e:
             print(str(e))
 
     def software_trigger(self):
-        print("Executing software trigger...")
+        if self.vocal:
+            print("Executing software trigger")
         self.node_map.FindNode("TriggerSoftware").Execute()
         self.node_map.FindNode("TriggerSoftware").WaitUntilDone()
-        print("Finished.")
+        if self.vocal:
+            print("Finished.")
 
     def _valid_name(self, path: str, ext: str):
         num = 0
@@ -224,8 +238,8 @@ class Camera:
             for _ in range(buffer_amount):
                 buffer = self._datastream.AllocAndAnnounceBuffer(payload_size)
                 self._buffer_list.append(buffer)
-
-            print("Allocated buffers!")
+            if self.vocal:
+                print("Allocated buffers!")
         except Exception as e:
            print("error")
 
@@ -237,10 +251,11 @@ class Camera:
             print(f"Cannot change pixelformat: {str(e)}")
 
     def send_image(self):
-        cwd = os.getcwd()
+        cwd = os.getcwd() + '\\figures'
 
         buffer = self._datastream.WaitForFinishedBuffer(1000)
-        print("Buffered image!")
+        if self.vocal:
+            print("Buffered image!")
 
         # Get image from buffer (shallow copy)
         self.ipl_image = ids_peak_ipl_extension.BufferToImage(buffer)
@@ -249,15 +264,15 @@ class Camera:
         # This creates a deep copy of the image, so the buffer is free to be used again
         # NOTE: Use `ImageConverter`, since the `ConvertTo` function re-allocates
         #       the converison buffers on every call
-        converted_ipl_image = self._image_converter.Convert(
-            self.ipl_image, TARGET_PIXEL_FORMAT)
+        converted_ipl_image = self._image_converter.Convert(self.ipl_image, TARGET_PIXEL_FORMAT)
 
         # Get raw image data from converted image and construct a QImage from it
-        self.current_image = copy.copy(converted_ipl_image.get_numpy_2D_16())
-        print(self.current_image.shape)
-        print(self.current_image[1500])
-        #plt.imshow(self.current_image)
-        #plt.show()
+        self.current_image = copy.copy(converted_ipl_image.get_numpy_2D())
+
+        ids_peak_ipl.ImageWriter.WriteAsPNG(
+            self._valid_name(cwd + "/image", ".png"), converted_ipl_image)
+        if self.vocal:
+            print("Saved!")
 
         self._datastream.QueueBuffer(buffer)
 
@@ -272,3 +287,99 @@ class Camera:
                     self.make_image = False
             except Exception as e:
                 self.make_image = False
+
+    def set_exposure_time(self, exposuretime):
+        try:
+            self.node_map.FindNode("ExposureTime").SetValue(exposuretime)
+        except ids_peak.Exception:
+            print(f"Could not set exposure time!")
+
+    def capture_image(self):
+        time.sleep(0.5)
+        # Capture image from the camera
+        self.make_image = True
+        # wait until image has been made
+        while self.make_image:
+            pass
+        if self.vocal:
+            print("image captured")
+
+        # Define a 2D Gaussian function
+    def twoD_Gaussian(self, xy, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+        x, y = xy
+        xo = float(xo)
+        yo = float(yo)
+        a = (np.cos(theta) ** 2) / (2 * sigma_x ** 2) + (np.sin(theta) ** 2) / (2 * sigma_y ** 2)
+        b = -(np.sin(2 * theta)) / (4 * sigma_x ** 2) + (np.sin(2 * theta)) / (4 * sigma_y ** 2)
+        c = (np.sin(theta) ** 2) / (2 * sigma_x ** 2) + (np.cos(theta) ** 2) / (2 * sigma_y ** 2)
+        g = offset + amplitude * np.exp(- (a * ((x - xo) ** 2) + 2 * b * (x - xo) * (y - yo)
+                                           + c * ((y - yo) ** 2)))
+        return g.ravel()
+
+    def get_cal_coords(self, current_image):
+        h, w = current_image.shape
+        flattened_data = current_image.ravel()
+
+        x = np.linspace(0, w, w)
+        y = np.linspace(0, h, h)
+        x, y = np.meshgrid(x, y)
+
+        # initial guess of parameters
+        peaks, _ = find_peaks(flattened_data, distance=1000000, height=100)
+        print(peaks)
+
+        plt.plot(flattened_data)
+        plt.plot(peaks, flattened_data[peaks], 'x')
+        plt.show()
+
+        coords = []
+        popt_array = []
+
+        # Maybe here exception for checking if there are exactly 3 peaks
+        for i in range(3):
+            print(i, ' gaussian fit')
+            y_0, x_0 = np.unravel_index(peaks[i], current_image.shape)
+            initial_guess = (flattened_data[peaks[i]], x_0, y_0, 10, 10, 0, 0)
+            # find the optimal Gaussian parameters
+            popt, pcov = opt.curve_fit(self.twoD_Gaussian, (x, y), flattened_data, p0=initial_guess)
+            coords.append([popt[1], popt[2]])
+            popt_array.append(popt)
+
+        data_fitted1 = self.twoD_Gaussian((x, y), *popt_array[0])
+        data_fitted2 = self.twoD_Gaussian((x, y), *popt_array[1])
+        data_fitted3 = self.twoD_Gaussian((x, y), *popt_array[2])
+        fig, ax = plt.subplots(1, 1)
+        # ax.hold(True) For older versions. This has now been deprecated and later removed
+        ax.imshow(flattened_data.reshape(current_image.shape), origin='lower', extent=(x.min(), x.max(), y.min(), y.max()))
+        ax.contour(x, y, data_fitted1.reshape(current_image.shape), 8, colors='w')
+        ax.contour(x, y, data_fitted2.reshape(current_image.shape), 8, colors='w')
+        ax.contour(x, y, data_fitted3.reshape(current_image.shape), 8, colors='w')
+        plt.show()
+
+        return np.array([coords[2], coords[0], coords[1]]).astype(np.float32)
+
+    def calibrate_camera(self, dmd):
+        if self.vocal:
+            print('\n\nstart calibration')
+
+        cal_pattern, dmd_coords = patterns.calibration_pattern(dmd.height, dmd.width, 400)
+        test_img10 = abs(cal_pattern - (2 ** 8 - 1))
+
+        dmd_thread = threading.Thread(target=dmd.start_sequence, args=(test_img10,), kwargs={'duration': 5})
+        cam_thread = threading.Thread(target=self.capture_image)
+
+        dmd_thread.start()
+        cam_thread.start()
+
+        dmd_thread.join()
+        cam_thread.join()
+
+        camera_coords = self.get_cal_coords(self.current_image)
+
+        if self.vocal:
+            print('Executing affine transformation')
+        trans_matrix = cv2.getAffineTransform(camera_coords, np.flip(dmd_coords, axis=None))
+        np.flip(dmd_coords, axis=None)
+
+        return trans_matrix
+

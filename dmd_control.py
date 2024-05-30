@@ -1,6 +1,6 @@
 # author: Louisa Marie Kienesberger
 
-from dmd.ALP4 import *
+from dmd.x64.ALP4 import *
 import time
 import patterns
 
@@ -9,11 +9,15 @@ class DigitalMicroMirrorDevice:
     def __init__(self, dummy):
         if dummy:
             self._dummy = True
-            self._dim = (self._height, self._width) = (1920, 1080)
-            print("Dummy DMD activated.")
+            self.vocal = False
+            self._dim = (self._height, self._width) = (1080, 1920)
+            if self.vocal:
+                print("Dummy DMD activated.")
         else:
+            self._dummy = False
+            self.vocal = False
             # Load the Vialux.dll
-            self._DMD = ALP4(version='4.3', libDir='C:/Users/laborbenutzer/Desktop/Louisa/DMD_control/dmd')
+            self._DMD = ALP4(version='4.3', libDir='C:\\Users\\laborbenutzer\\Desktop\\Louisa\\DMD_control\\dmd')
             # Initialize the device
             self._DMD.Initialize()
 
@@ -24,6 +28,8 @@ class DigitalMicroMirrorDevice:
             self.nbImg = None
 
     def start_sequence(self, sequence, nbImg=1, bitDepth=1, pictureTime=2000, duration=60):
+        if self.vocal:
+            print('DMD - start sequence')
         # Allocate the onboard memory for the image sequence
         if self._dummy:
             width, height = 1080, 1920
