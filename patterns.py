@@ -12,11 +12,11 @@ def rect_pattern(height, width, size):
     r = int(size / 2)
 
     if size == 1:
-        img[centery, centerx] = (2 ** 8 - 1)
+        img[centery, centerx] = 1
     elif size % 2 == 0:
-        img[centery - r:centery + r - 1, centerx - r:centerx + r - 1] = (2 ** 8 - 1)
+        img[centery - r:centery + r - 1, centerx - r:centerx + r - 1] = 1
     elif size % 2 == 1:
-        img[centery - r:centery + r, centerx - r:centerx + r] = (2 ** 8 - 1)
+        img[centery - r:centery + r, centerx - r:centerx + r] = 1
 
     return img
 
@@ -35,7 +35,7 @@ def ring_pattern(height, width, radius, ring_width):
 
     # Create a binary array with the ring imprinted
     img = np.zeros((width, height))
-    img[ring_mask] = (2 ** 8 - 1)
+    img[ring_mask] = 1
 
     return img
 
@@ -49,9 +49,9 @@ def string_pattern(height, width, string_width):
     if string_width == 1:
         img[centery, :] = (2 ** 8 - 1)
     elif string_width % 2 == 0:
-        img[centery - h:centery + h - 1, :] = (2 ** 8 - 1)
+        img[centery - h:centery + h - 1, :] = 1
     elif string_width % 2 == 1:
-        img[centery - h:centery + h, :] = (2 ** 8 - 1)
+        img[centery - h:centery + h, :] = 1
 
     return img
 
@@ -90,7 +90,7 @@ def speckle_disorder(height, width, pixel_size=1, p=0.5):
     meta_cols = width // pixel_size
 
     # Generate a metapixel matrix of random 0s and 1s
-    metapixel_matrix = np.random.choice([0,1], size=(meta_rows, meta_cols), p=[1-p, p])
+    metapixel_matrix = np.random.choice([0, 1], size=(meta_rows, meta_cols), p=[1-p, p])
 
     # Repeat each value in the metapixel matrix to form the binary matrix
     binary_matrix = np.repeat(np.repeat(metapixel_matrix,  pixel_size, axis=0), pixel_size, axis=1)
@@ -123,9 +123,9 @@ def calibration_pattern(height, width, square_size):
     bottom_left = [centery + half_square, centerx - half_square]
 
     # Set the values in the corners with the given block size
-    img[top_left[0] - half_block:top_left[0] + half_block, top_left[1] - half_block:top_left[1] + half_block] = 2**8-1
-    img[top_right[0] - half_block:top_right[0] + half_block, top_right[1] - half_block:top_right[1] + half_block] = 2**8-1
-    img[bottom_left[0] - half_block:bottom_left[0] + half_block, bottom_left[1] - half_block:bottom_left[1] + half_block] = 2**8-1
+    img[top_left[0] - half_block:top_left[0] + half_block, top_left[1] - half_block:top_left[1] + half_block] = 1
+    img[top_right[0] - half_block:top_right[0] + half_block, top_right[1] - half_block:top_right[1] + half_block] = 1
+    img[bottom_left[0] - half_block:bottom_left[0] + half_block, bottom_left[1] - half_block:bottom_left[1] + half_block] = 1
 
     coords = np.array([top_left, top_right, bottom_left]).astype(np.float32)
 

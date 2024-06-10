@@ -363,7 +363,7 @@ class Camera:
             print('\n\nstart calibration')
 
         cal_pattern, dmd_coords = patterns.calibration_pattern(dmd.height, dmd.width, 400)
-        test_img10 = abs(cal_pattern - (2 ** 8 - 1))
+        test_img10 = abs((cal_pattern-1)*255)
 
         dmd_thread = threading.Thread(target=dmd.start_sequence, args=(test_img10,), kwargs={'duration': 5})
         cam_thread = threading.Thread(target=self.capture_image)
@@ -379,7 +379,6 @@ class Camera:
         if self.vocal:
             print('Executing affine transformation')
         trans_matrix = cv2.getAffineTransform(camera_coords, np.flip(dmd_coords, axis=None))
-        np.flip(dmd_coords, axis=None)
 
         return trans_matrix
 

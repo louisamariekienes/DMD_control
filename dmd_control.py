@@ -54,8 +54,6 @@ class DigitalMicroMirrorDevice:
             self._DMD.Halt()
             # Free the sequence from the onboard memory
             self._DMD.FreeSeq()
-            # De-allocate the device
-            self._DMD.Free()
             pass
 
     def set_pattern(self, pattern, nbImg):
@@ -69,3 +67,7 @@ class DigitalMicroMirrorDevice:
     @property
     def width(self):
         return self._width
+
+    def close(self):
+        # De-allocate the device
+        self._DMD.Free()
