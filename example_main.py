@@ -28,14 +28,12 @@ def main():
 
     imgBlack = np.zeros([DMD.nSizeY, DMD.nSizeX])
     imgWhite = np.ones([DMD.nSizeY, DMD.nSizeX]) * (2 ** 8 - 1)
-    test_img8 = abs(patterns.image_pattern(height, width, 'figures/KL_skyline.jpg')-(2**8-1))
-    test_img1 = patterns.rect_pattern(height, width, 10)
-    test_img2 = abs(patterns.rect_pattern(height, width, 400)-(2**8-1))
-    test_img5, var = patterns.calibration_pattern(height, width, 400)
-    test_img10 = abs(test_img5-(2**8-1))
-    #cal_pattern, dmd_coords = patterns.calibration_pattern(height, width, 400)
-    #test_img10 = abs(cal_pattern - (2 ** 8 - 1))
-    plt.imshow(test_img10)
+
+    test_img2 = abs(patterns.rect_pattern(height, width, 400)-1)*255
+    #test_img5, var = patterns.calibration_pattern(height, width, 400)
+    #test_img10 = abs(test_img5-(2**8-1))
+
+    plt.imshow(test_img2)
     plt.show()
 
     img_list = []
@@ -49,7 +47,7 @@ def main():
     DMD.SeqAlloc(nbImg=1, bitDepth=bitDepth)
     # Send the image sequence as a 1D list/array/numpy array
     # DMD.SeqPut(imgData=imgSeq)
-    DMD.SeqPut(imgData=test_img10)
+    DMD.SeqPut(imgData=test_img2)
     # Set image rate to 50/1 Hz
     #DMD.SetTiming(pictureTime=20000)        # 20000 for 50 Hz, 1 for 1Hz
 

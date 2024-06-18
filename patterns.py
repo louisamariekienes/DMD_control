@@ -24,7 +24,7 @@ def rect_pattern(height, width, size):
 def ring_pattern(height, width, radius, ring_width):
 
     # Create a grid of coordinates
-    y, x = np.ogrid[:width, :height]
+    y, x = np.ogrid[:height, :width]
 
     # Calculate the distance from the center of the array
     distance_from_center = np.sqrt((x - width / 2) ** 2 + (y - height / 2) ** 2)
@@ -34,7 +34,7 @@ def ring_pattern(height, width, radius, ring_width):
                                distance_from_center <= radius + ring_width / 2)
 
     # Create a binary array with the ring imprinted
-    img = np.zeros((width, height))
+    img = np.zeros((height, width))
     img[ring_mask] = 1
 
     return img

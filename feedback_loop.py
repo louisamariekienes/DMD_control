@@ -20,7 +20,7 @@ class OpticalFeedbackLoop:
     def set_target_image(self, target_image):
         self.target_image = target_image
 
-    def calculate_error_mtrx(self, current_image, bg_image):
+    def calculate_error_mtrx(self, current_image, bg_image, i):
         # Calculate error between current image and target image
         if self.target_image is None:
             print("Error: Target image is not set")
@@ -29,19 +29,20 @@ class OpticalFeedbackLoop:
         nom_target_img = self.target_image #/ 2
 
         #Substract background from image
-        no_bg_img = current_image - bg_image
+        no_bg_img = current_image #- bg_image
 
         #plt.imshow(no_bg_img)
         #plt.show()
 
         # Normiertes CCD image
         ccd_img = cv.warpAffine(no_bg_img, self.trans_matrix, (self.dmd.width, self.dmd.height))
+        #if i == 1:
         ccd_img_max = np.max(ccd_img)
         self.nom_current_image = ccd_img/ccd_img_max
 
         # Implementation of error function
         # E_n = T - A * CCD_n
-        error = nom_target_img -  self.nom_current_image
+        error = 1 - (nom_target_img - self.nom_current_image)
 
         return error
 
@@ -50,11 +51,22 @@ class OpticalFeedbackLoop:
         self.dmd_image = abs((self.target_image-1)*255)
         i = 1
         cumsum_error_mtrx = np.zeros((self.dmd.height, self.dmd.width))
+
+        dmd_thread = threading.Thread(target=self.dmd.start_sequence,
+                                      args=(np.ones([self.dmd.height, self.dmd.width]) * 255,),
+                                      kwargs={'duration': 1})
+        cam_thread = threading.Thread(target=self.camera.capture_image, kwargs={'save_image': True})
+
+        dmd_thread.start()
+        cam_thread.start()
+
+        dmd_thread.join()
+        cam_thread.join()
+
+        bg_image = self.camera.current_image
         while True:
-            self.camera.capture_image()
-            bg_image = self.camera.current_image
             dmd_thread = threading.Thread(target=self.dmd.start_sequence, args=(self.dmd_image,), kwargs={'duration': 1})
-            cam_thread = threading.Thread(target=self.camera.capture_image)
+            cam_thread = threading.Thread(target=self.camera.capture_image, kwargs={'save_image': True})
 
             dmd_thread.start()
             cam_thread.start()
@@ -66,7 +78,7 @@ class OpticalFeedbackLoop:
                 print("FBL after capturing image")
 
             # Calculate error matrix
-            error_mtrx = self.calculate_error_mtrx(self.camera.current_image, bg_image)
+            error_mtrx = self.calculate_error_mtrx(self.camera.current_image, bg_image, i)
 
             cumsum_error_mtrx += error_mtrx
 
@@ -76,12 +88,12 @@ class OpticalFeedbackLoop:
             print("RMS error     ", rms_error)
 
             # Adjust DMD image according to errormatrix
-            new_dmd_img = self.adjust_dmd_image(error_mtrx, cumsum_error_mtrx)
+            self.adjust_dmd_image(error_mtrx, cumsum_error_mtrx)
 
             # Break condition or sleep
             i += 1
 
-            if i > 10:
+            if i > 5:
                 break
         return self.dmd_image
 
@@ -99,6 +111,8 @@ class OpticalFeedbackLoop:
     def floyd_steinberg(self, image):
         # image: np.array of shape (height, width), dtype=float, 0.0-1.0
         # works in-place!
+        #plt.imshow(image)
+        #plt.show()
         h, w = image.shape
         for y in range(h):
             for x in range(w):
@@ -122,16 +136,12 @@ class OpticalFeedbackLoop:
         return image
 
     def adjust_dmd_image(self, error_mtrx, cumsum_error_mtrx):
-        kp1 = -0.99
+        kp1 = -0.3
         ki = -10e-1
 
         nom_target_img = self.target_image
-        new_dmd_img = nom_target_img + kp1 * error_mtrx #+ ki * cumsum_error_mtrx
-        new_dmd_img_bin = self.floyd_steinberg(new_dmd_img)
+        new_dmd_img = nom_target_img + kp1 * error_mtrx  # ki * cumsum_error_mtrx
 
-
-        self.dmd_image = abs((np.round(new_dmd_img_bin)-1)*255)
-        '''
         fig, ([ax1, ax2, ax3], [ax4, ax5, ax6]) = plt.subplots(2, 3, figsize=(10, 5))
         ax1.imshow(nom_target_img)
         ax1.set_title('target image 0 - 0.5')
@@ -141,11 +151,12 @@ class OpticalFeedbackLoop:
         ax3.set_title('error_matrix')
         ax4.imshow(new_dmd_img)
         ax4.set_title('new DMD image')
+        new_dmd_img_bin = self.floyd_steinberg(new_dmd_img)
         ax5.imshow(new_dmd_img_bin)
         ax5.set_title('new DMD image binär')
         ax6.imshow(cumsum_error_mtrx)
         ax6.set_title('CumSum error matrix')
         plt.show()
-        '''
-        return new_dmd_img_bin
-    
+
+        self.dmd_image = abs((np.round(new_dmd_img_bin) - 1) * 255)
+

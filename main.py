@@ -26,10 +26,11 @@ def main():
     #trans_matrix = camera.calibrate_camera(dmd_controller)
     #print(trans_matrix)
 
-    #trans_matrix = np.array([[2.99001059e-01, -2.76386613e-01, 8.44264258e+02], [2.75533658e-01, 2.99750983e-01, -6.45481647e+01]])
-    trans_matrix = np.array([[2.99900894e-01, -2.76227593e-01, 8.57316854e+02], [2.76379554e-01,  2.99818977e-01, -5.26320542e+01]])
+    trans_matrix = np.array([[2.99737994e-01, -2.76302592e-01, 8.48190546e+02], [2.76492825e-01, 2.99426738e-01, -6.21231328e+01]])
     # Define target image
-    target_image = patterns.rect_pattern(dmd_controller.height, dmd_controller.width, 400)
+    #target_image = patterns.rect_pattern(dmd_controller.height, dmd_controller.width, 400)
+    target_image = patterns.ring_pattern(dmd_controller.height, dmd_controller.width, 200, 40)
+    target_image = patterns.speckle_disorder(dmd_controller.height, dmd_controller.width, 10, 0.5)
 
     feedback_loop = OpticalFeedbackLoop(dmd_controller, camera, trans_matrix)
 

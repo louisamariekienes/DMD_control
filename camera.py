@@ -28,6 +28,7 @@ class Camera:
         self.vocal = False
         self.ipl_image = None
         self.current_image = None
+        self.save_image = False
         self._device = None
         self._datastream = None
         self.acquisition_running = False
@@ -269,10 +270,12 @@ class Camera:
         # Get raw image data from converted image and construct a QImage from it
         self.current_image = copy.copy(converted_ipl_image.get_numpy_2D())
 
-        ids_peak_ipl.ImageWriter.WriteAsPNG(
-            self._valid_name(cwd + "/image", ".png"), converted_ipl_image)
-        if self.vocal:
-            print("Saved!")
+        if self.save_image:
+            ids_peak_ipl.ImageWriter.WriteAsPNG(
+                self._valid_name(cwd + "/image", ".png"), converted_ipl_image)
+            self.save_image = False
+            if self.vocal:
+                print("Saved!")
 
         self._datastream.QueueBuffer(buffer)
 
@@ -294,8 +297,9 @@ class Camera:
         except ids_peak.Exception:
             print(f"Could not set exposure time!")
 
-    def capture_image(self):
+    def capture_image(self, save_image=False):
         time.sleep(0.5)
+        self.save_image = save_image
         # Capture image from the camera
         self.make_image = True
         # wait until image has been made
