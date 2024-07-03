@@ -93,7 +93,7 @@ class OpticalFeedbackLoop:
             # Break condition or sleep
             i += 1
 
-            if i > 5:
+            if i > 3:
                 break
         return self.dmd_image
 

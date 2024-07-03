@@ -9,6 +9,7 @@ import threading
 import patterns
 import time
 import scipy.optimize as opt
+import cv2 as cv
 
 from ids_peak import ids_peak
 from ids_peak_ipl import ids_peak_ipl
@@ -330,11 +331,11 @@ class Camera:
 
         # initial guess of parameters
         peaks, _ = find_peaks(flattened_data, distance=1000000, height=100)
-        print(peaks)
+        #print(peaks)
 
-        plt.plot(flattened_data)
-        plt.plot(peaks, flattened_data[peaks], 'x')
-        plt.show()
+        #plt.plot(flattened_data)
+        #plt.plot(peaks, flattened_data[peaks], 'x')
+        #plt.show()
 
         coords = []
         popt_array = []
@@ -352,6 +353,7 @@ class Camera:
         data_fitted1 = self.twoD_Gaussian((x, y), *popt_array[0])
         data_fitted2 = self.twoD_Gaussian((x, y), *popt_array[1])
         data_fitted3 = self.twoD_Gaussian((x, y), *popt_array[2])
+        '''
         fig, ax = plt.subplots(1, 1)
         # ax.hold(True) For older versions. This has now been deprecated and later removed
         ax.imshow(flattened_data.reshape(current_image.shape), origin='lower', extent=(x.min(), x.max(), y.min(), y.max()))
@@ -359,6 +361,10 @@ class Camera:
         ax.contour(x, y, data_fitted2.reshape(current_image.shape), 8, colors='w')
         ax.contour(x, y, data_fitted3.reshape(current_image.shape), 8, colors='w')
         plt.show()
+        '''
+        np.savetxt("temp/data_fitted1.csv", data_fitted1.reshape(current_image.shape), delimiter=",")
+        np.savetxt("temp/data_fitted2.csv", data_fitted2.reshape(current_image.shape), delimiter=",")
+        np.savetxt("temp/data_fitted3.csv", data_fitted3.reshape(current_image.shape), delimiter=",")
 
         return np.array([coords[2], coords[0], coords[1]]).astype(np.float32)
 
@@ -383,6 +389,24 @@ class Camera:
         if self.vocal:
             print('Executing affine transformation')
         trans_matrix = cv2.getAffineTransform(camera_coords, np.flip(dmd_coords, axis=None))
+
+        fig, ([ax1, ax2, ax3]) = plt.subplots(1, 3, figsize=(10, 5))
+        ax1.imshow(cal_pattern)
+        ax1.set_xlabel('pixels')
+        ax1.set_ylabel('pixels')
+        ax2.imshow(self.current_image)
+        ax2.set_xlabel('pixels')
+        ax2.set_ylabel('pixels')
+        trans_image = cv.warpAffine(self.current_image, trans_matrix, (dmd.width, dmd.height))
+        ax3.imshow(trans_image)
+        ax3.set_xlabel('pixels')
+        ax3.set_ylabel('pixels')
+        plt.show()
+        plt.savefig('calibration.png')
+
+        np.savetxt("temp/cal_pattern.csv", cal_pattern, delimiter=",")
+        np.savetxt("temp/ccd_image.csv", self.current_image, delimiter=",")
+        np.savetxt("temp/trans_image.csv", trans_image, delimiter=",")
 
         return trans_matrix
 
