@@ -113,11 +113,6 @@ def calibration_pattern(height, width, square_size):
     half_square = square_size // 2
 
     # Define the corner positions for the square
-    #top_left = [centery - half_square, centerx - half_square]
-    #top_right = [centery + half_square, centerx - half_square]
-    #bottom_left = [centery - half_square, centerx + half_square]
-
-    # Define the corner positions for the square
     top_left = [centery - half_square, centerx - half_square]
     top_right = [centery - half_square, centerx + half_square]
     bottom_left = [centery + half_square, centerx - half_square]
@@ -130,4 +125,28 @@ def calibration_pattern(height, width, square_size):
     coords = np.array([top_left, top_right, bottom_left]).astype(np.float32)
 
     return img, coords
+
+def sin_pattern(height, width, size):
+    num_sinuses = 1000
+
+    x = np.linspace(0, 2 * np.pi, size)
+    sum_of_sinuses = np.zeros(size)
+
+    for i in range(num_sinuses):
+        frequency = np.random.uniform(1, 100)  # Random frequency between 1 and 50
+        amplitude = np.random.uniform(0.1, 1)  # Random amplitude between 0.1 and 1
+        sinusoid = amplitude * np.sin(frequency * x)
+        sum_of_sinuses += sinusoid
+
+    bw_image = np.where(sum_of_sinuses > 0, 1, 0)
+
+    # Repeat the one-dimensional array to create a two-dimensional array
+    two_d_array = np.tile(bw_image, (500, 1))
+
+    fill_y = int((width - size) / 2)
+    fill_x = int((height - size) / 2)
+    img = np.pad(two_d_array, ((fill_x, fill_x), (fill_y, fill_y)), mode='constant', constant_values=((1, 1), (1, 1)))
+
+    return img
+
 
