@@ -56,19 +56,17 @@ def string_pattern(height, width, string_width):
     return img
 
 
-def image_pattern(height, width, image_path):
+def image_pattern(height, width, image_path, image_dim_on_dmd):
     # Open the input image
-    img = Image.open(image_path)
+    img = Image.open(image_path).convert('L')
+    new_image = img.resize(image_dim_on_dmd)
 
-    # Resize the image to fit the desired dimensions while maintaining aspect ratio
-    img.thumbnail((width, height))
-
-    # Convert the resized image to black/white image
-    gray_img = img.convert('1')
-    matrix = np.invert(np.array(gray_img))
+    # Coversion using floyd steinberg algorithm
+    matrix = np.invert(np.array(new_image))
+    img_bin = floyd_steinberg(matrix)
 
     # Get the dimensions of the resized image
-    resized_height, resized_width = matrix.shape
+    resized_height, resized_width = img_bin.shape
 
     # Calculate the starting indices for placing the matrix in the center
     start_row = (height - resized_height) // 2
@@ -78,7 +76,7 @@ def image_pattern(height, width, image_path):
     final_matrix = np.zeros((height, width))
 
     # Place the resized matrix in the center of the final matrix
-    final_matrix[start_row:start_row + resized_height, start_col:start_col + resized_width] = matrix
+    final_matrix[start_row:start_row + resized_height, start_col:start_col + resized_width] = img_bin
 
     return final_matrix
 
@@ -148,5 +146,32 @@ def sin_pattern(height, width, size):
     img = np.pad(two_d_array, ((fill_x, fill_x), (fill_y, fill_y)), mode='constant', constant_values=((1, 1), (1, 1)))
 
     return img
+
+
+def floyd_steinberg(image):
+    # image: np.array of shape (height, width), dtype=float, 0.0-1.0
+    # works in-place!
+    #plt.imshow(image)
+    #plt.show()
+    h, w = image.shape
+    for y in range(h):
+        for x in range(w):
+            old = image[y, x]/255
+            new = np.round(old)
+            image[y, x] = new
+            #image[y, x] = abs(image[y, x] - 1)
+            error = old - new
+            # precomputing the constants helps
+            if x + 1 < w:
+                image[y, x + 1] += error * 0.4375  # right, 7 / 16
+            if (y + 1 < h) and (x + 1 < w):
+                image[y + 1, x + 1] += error * 0.0625  # right, down, 1 / 16
+            if y + 1 < h:
+                image[y + 1, x] += error * 0.3125  # down, 5 / 16
+            if (x - 1 >= 0) and (y + 1 < h):
+                image[y + 1, x - 1] += error * 0.1875  # left, down, 3 / 16
+            else:
+                image[y, x] = 0
+    return image
 
 
