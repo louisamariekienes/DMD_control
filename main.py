@@ -11,11 +11,13 @@ import numpy as np
 
 def main():
     # Initialize DMD
+    calibration = False
+    perform_fbl = True
     dmd_controller = DigitalMicroMirrorDevice(dummy=False)
 
     camera = Camera()
 
-    camera.set_exposure_time(3000)
+    camera.set_exposure_time(1450)
     camera.init_software_trigger()
     camera.start_acquisition()
 
@@ -23,25 +25,24 @@ def main():
     camera_thread.start()
 
     # Calibration of the CCD image to the DMD
-    trans_matrix = camera.calibrate_camera(dmd_controller)
-    print(trans_matrix)
+    if calibration:
+        trans_matrix = camera.calibrate_camera(dmd_controller)
+        print(trans_matrix)
+    else:
+        trans_matrix = np.array([[3.12093830e-01, -2.64751600e-01,  8.26052258e+02], [2.65910267e-01, 3.11401757e-01, -1.00719890e+02]])
 
-    #trans_matrix = np.array([[ 3.05333170e-01, -2.79312256e-01,  8.41659153e+02], [ 2.75798595e-01,  3.03630462e-01, -7.89321620e+01]])
-    # Define target image
-    #target_image = patterns.rect_pattern(dmd_controller.height, dmd_controller.width, 400)
-    #target_image = patterns.ring_pattern(dmd_controller.height, dmd_controller.width, 200, 40)
-    #target_image = patterns.speckle_disorder(dmd_controller.height, dmd_controller.width, 10, 0.5)
+    if perform_fbl:
+        # Define target image
+        target_image = patterns.rect_pattern(dmd_controller.height, dmd_controller.width, 400)
 
-    #feedback_loop = OpticalFeedbackLoop(dmd_controller, camera, trans_matrix)
+        feedback_loop = OpticalFeedbackLoop(dmd_controller, camera, trans_matrix)
 
-    #dmd_image = feedback_loop.run_feedback_loop(target_image)
-    #print('Feedback loop done')
-
-    # Just send an image
+        dmd_image = feedback_loop.run_feedback_loop(target_image)
+        print('Feedback loop done')
 
     camera.close()
     dmd_controller.close()
-    print('finished')
+    print('Finished')
     camera_thread.join()
 
 

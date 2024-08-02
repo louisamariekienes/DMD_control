@@ -16,7 +16,6 @@ def main():
 
     # Load the Vialux.dll
     DMD = ALP4(version='4.3', libDir='C:\\Users\\laborbenutzer\\Desktop\\Louisa\\DMD_control\\dmd')
-    #DMD = ALP4(version='4.3', libDir='C:\Program Files\ALP-4.3/ALP-4.3 API')
 
     # Initialize the device
     DMD.Initialize()
@@ -29,7 +28,7 @@ def main():
     imgBlack = np.zeros([DMD.nSizeY, DMD.nSizeX])
     imgWhite = np.ones([DMD.nSizeY, DMD.nSizeX]) * (2 ** 8 - 1)
 
-    test_img2 = abs(patterns.rect_pattern(height, width, 500)-1)*255
+    test_img2 = abs(patterns.rect_pattern(height, width, 400)-1)*255
     #test_img5, var = patterns.calibration_pattern(height, width, 400)
     #test_img10 = abs(test_img5-(2**8-1))
 
@@ -44,8 +43,7 @@ def main():
     DMD.SeqAlloc(nbImg=1, bitDepth=bitDepth)
     # Send the image sequence as a 1D list/array/numpy array
     # DMD.SeqPut(imgData=imgSeq)
-    DMD.SeqPut(imgData=test_img2#
-               )
+    DMD.SeqPut(imgData=test_img2)
     # Set image rate to 50/1 Hz
     #DMD.SetTiming(pictureTime=20000)        # 20000 for 50 Hz, 1 for 1Hz
 
