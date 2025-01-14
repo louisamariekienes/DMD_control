@@ -20,7 +20,7 @@ class OpticalFeedbackLoop:
 
     def run_feedback_loop(self, target_image):
         self.set_target_image(target_image)
-        self.dmd_image = abs((self.target_image-1)*255)
+        self.dmd_image = self.target_image
         i = 1
         cumsum_error_mtrx = np.zeros((self.dmd.height, self.dmd.width))
 
@@ -41,7 +41,11 @@ class OpticalFeedbackLoop:
 
 
         while True:
-            dmd_thread = threading.Thread(target=self.dmd.start_sequence, args=(self.dmd_image,), kwargs={'duration': 1})
+            # Making the values right for DMD control
+            dmd_pattern = abs((self.dmd_image-1) * 255)
+            plt.imshow(dmd_pattern)
+            plt.show()
+            dmd_thread = threading.Thread(target=self.dmd.start_sequence, args=(dmd_pattern,), kwargs={'duration': 1})
             cam_thread = threading.Thread(target=self.camera.capture_image, kwargs={'save_image': True})
 
             dmd_thread.start()
@@ -87,31 +91,32 @@ class OpticalFeedbackLoop:
         ccd_img = cv.warpAffine(current_image, self.trans_matrix, (self.dmd.width, self.dmd.height))
         ccd_img_nobg = np.where(self.target_image == 0, self.target_image, ccd_img)
 
-        self.nom_current_image = ccd_img_nobg/255
-
+        self.nom_current_image = ccd_img_nobg/np.max(ccd_img_nobg)
+        print("nom_current_image", np.min(self.nom_current_image), np.max(self.nom_current_image))
         # Implementation of error function
         # E_n = T - A * CCD_n
-        error = 1 - (self.target_image - self.nom_current_image)
-        # error = self.target_image - self.nom_current_image
+        #error = 1 - (self.target_image - self.nom_current_image)
+        factor = 0.5
+        error = np.where(self.target_image == 1, (self.target_image*factor - self.nom_current_image), 0)
 
         return error
 
     def calculate_RMSerror(self):
         h, w = self.target_image.shape
         sum = 0
+        on_pixel = 0
         for y in range(h):
             for x in range(w):
                 if self.target_image[y, x] == 1 and self.nom_current_image[y, x] != 0:
-                    sum += ((self.target_image[y, x] - self.nom_current_image[y, x]) / self.nom_current_image[y, x])**2
-        rms_error = np.sqrt(sum*(1/(self.dmd.width*self.dmd.height)))*100
+                    sum += ((self.target_image[y, x] - self.nom_current_image[y, x])/self.target_image[y, x])**2
+                    on_pixel += 1
+        rms_error = np.sqrt(sum*(1/on_pixel))*100
         return rms_error
-
 
     def floyd_steinberg(self, image):
         # image: np.array of shape (height, width), dtype=float, 0.0-1.0
         # works in-place!
-        #plt.imshow(image)
-        #plt.show()
+        print("FSA; min", np.min(image), " max ", np.max(image))
         h, w = image.shape
         for y in range(h):
             for x in range(w):
@@ -134,21 +139,31 @@ class OpticalFeedbackLoop:
         return image
 
     def adjust_dmd_image(self, error_mtrx, cumsum_error_mtrx):
-        kp1 = -0.3
-        ki = -10e-5
+        kp1 = 0.5
+        ki = 10e-2
 
-        new_dmd_img = self.target_image + kp1 * error_mtrx # + ki * cumsum_error_mtrx
-        new_dmd_img_bin = self.floyd_steinberg(new_dmd_img)
+        new_dmd_img = self.dmd_image + kp1 * error_mtrx + ki * cumsum_error_mtrx
+        new_dmd_img_nom = (new_dmd_img-np.min(new_dmd_img))/(np.max(new_dmd_img)-np.min(new_dmd_img))
+        new_dmd_img_bin1 = np.round(new_dmd_img_nom)
+        new_dmd_img_bin2 = abs(self.floyd_steinberg(new_dmd_img_nom))
 
-        fig, ([ax1, ax2, ax3]) = plt.subplots(1, 3, figsize=(10, 5))
-        ax1.imshow(np.where(self.dmd_image == 255, 0, 1))
-        ax1.set_title('Current DMD image')
-        ax2.imshow(self.nom_current_image)
-        ax2.set_title('Current CCD image')
-        ax3.imshow(error_mtrx)
-        ax3.set_title('error_matrix')
-        plt.show()
+        plot = True
+        if plot:
+            fig, ([ax1, ax2], [ax3, ax4]) = plt.subplots(2, 2, figsize=(8, 5))
+            #ax1.imshow(np.where(self.dmd_image == 255, 0, 1))
+            ax1.imshow(self.dmd_image)
+            ax1.set_title('Current DMD image')
+            ax2.imshow(self.nom_current_image)
+            ax2.set_title('Current CCD image')
+            ax4.imshow(error_mtrx)
+            ax4.set_title('error_matrix')
 
-        self.dmd_image = np.where(new_dmd_img_bin == 1, 0, 255)
+            self.dmd_image = np.where(self.target_image == 1, 1 - new_dmd_img_bin, 0)
+            ax3.imshow(self.dmd_image)
+            ax3.set_title('Next DMD image')
+            plt.show()
+
+
+
 
 
