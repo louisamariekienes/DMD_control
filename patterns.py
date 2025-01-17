@@ -5,6 +5,7 @@ from PIL import Image
 
 
 def rect_pattern(height, width, size):
+    # strictly spoken always a square, maybe renaming?
     img = np.zeros([height, width])
 
     centery = int(height / 2)

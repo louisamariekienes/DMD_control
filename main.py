@@ -10,11 +10,13 @@ import numpy as np
 
 
 def main():
-    # Initialize DMD
     calibration = False
     perform_fbl = True
-    dmd_controller = DigitalMicroMirrorDevice(dummy=False)
 
+    # Initialize DMD
+    dmd_controller = DigitalMicroMirrorDevice()
+
+    # Initialize camera
     camera = Camera()
 
     camera.set_exposure_time(1450)
@@ -33,7 +35,7 @@ def main():
 
     if perform_fbl:
         # Define target image
-        target_image = patterns.rect_pattern(dmd_controller.height, dmd_controller.width, 400)
+        target_image = patterns.rect_pattern(dmd_controller.height, dmd_controller.width, 600)
 
         feedback_loop = OpticalFeedbackLoop(dmd_controller, camera, trans_matrix)
 
